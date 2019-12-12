@@ -1,0 +1,103 @@
+
+sources:
+  storyboard.openstack.org:
+    api_docs: https://docs.openstack.org/infra/storyboard/webapi/v1.html#stories
+    url: https://storyboard.openstack.org/api/v1/stories
+    params:
+      query:
+        limit: 5
+        project_id:
+        status:
+        tags:
+    item_url: https://storyboard.openstack.org/#!/story/{{id}}
+    item_name: "{{title}}"
+
+  review.opendev.org:
+    api_docs: https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#list-changes
+    url: https://review.opendev.org/changes/
+    params:
+      query:
+        n: 5
+        q:
+    response_prefix: ")]}'"
+    item_url: https://review.opendev.org/{{_number}}
+    item_name: "{{subject}}"
+
+  launchpad.net:
+    api_docs: https://launchpad.net/+apidoc/1.0.html#project
+    url: https://api.launchpad.net/1.0/{{project}}
+    params:
+      url:
+        project:
+      query:
+        ws.op: searchTasks
+        ws.size: 5
+        tags:
+        importance:
+        search_text:
+        status:
+    item_url: "{{web_link}}"
+    item_name: "{{title}}"
+
+  bugzilla.redhat.com:
+    api_docs: https://bugzilla.readthedocs.io/en/latest/api/core/v1/bug.html#search-bugs
+    url: https://bugzilla.redhat.com/rest/bug
+    params:
+      query:
+        limit: 5
+        product:
+        component:
+        tags:
+        priority:
+        severity:
+        status:
+    item_url: https://bugzilla.redhat.com/show_bug.cgi?id={{id}}
+    item_name: "{{summary}}"
+
+queries:
+  tripleo_ci_critical:
+    channel: tripleo
+    source: launchpad.net
+    params:
+      project: tripleo
+      tags: alert
+      importance: Critical
+    template: |
+      URGENT TRIPLEO TASKS NEEDING ATTENTION: {{result.total_size}}
+      {%- for item in result.entries %}
+      {{item.web_link}}
+      {%- endfor -%}
+
+  ironic_ci:
+    channel: openstack-ironic
+    source: storyboard.openstack.org
+    params:
+      status: active
+      tags: ci
+    template: |
+      {{result|length}} issues causing CI failures:
+      {%- for item in result %}
+      https://storyboard.openstack.org/#!/story/{{item.id}} {{item.title}}
+      {%- endfor %}
+
+  ironic_unreviewed:
+    channel: openstack-ironic
+    source: review.opendev.org
+    params:
+      q: >
+        project:^.*ironic.*
+        status:open
+        is:mergeable
+        -is:reviewed
+        age:1days
+        -age:1month
+        -message:WIP
+        -message:DNM
+    template: |
+      {{result|length}} changes in the last month needing reviews:
+      {%- for item in result %}
+      https://review.opendev.org/{{item._number}} {{item.project.split('/')[1]}}: {{item.subject}}
+      {%- endfor %}
+
+
+
