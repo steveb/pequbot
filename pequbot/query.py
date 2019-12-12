@@ -13,6 +13,7 @@
 #    under the License.
 
 import jinja2
+import jsonschema
 import requests
 import yaml
 
@@ -20,9 +21,44 @@ import json
 import os
 import sys
 
-# The yaml channel config should look like:
-"""
-"""
+SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'sources': {
+            'type': 'object'
+        },
+        'queries': {
+            'type': 'object'
+        }
+    }
+}
+
+SOURCE_SCHEMA = {
+    'type': 'object',
+    'required': ['url', 'params'],
+    'properties': {
+        'url': {'type': 'string'},
+        'params': {
+            'type': 'object',
+            'properties': {
+                'url': {'type': 'object'},
+                'query': {'type': 'object'}
+            }
+        },
+        'response_prefix': {'type': 'string'}
+    }
+}
+
+QUERY_SCHEMA = {
+    'type': 'object',
+    'required': ['channel', 'source', 'params', 'template'],
+    'properties': {
+        'channel': {'type': 'string'},
+        'source': {'type': 'string'},
+        'params': {'type': 'object'},
+        'template': {'type': 'string'}
+    }
+}
 
 
 class QueryResult(object):
@@ -35,9 +71,19 @@ class QueryResult(object):
 
 class Query(object):
 
-    def __init__(self, sources, queries, sender_func):
-        self.sources = sources
-        self.queries = queries
+    def __init__(self, channel_config, sender_func):
+        jsonschema.validate(channel_config, SCHEMA)
+        self.sources = channel_config.get('sources', {})
+        for s in self.sources.values():
+            jsonschema.validate(s, SOURCE_SCHEMA)
+
+        self.queries = channel_config.get('queries', {})
+        for q in self.queries.values():
+            jsonschema.validate(q, QUERY_SCHEMA)
+            if q['source'] not in self.sources:
+                raise Exception('source %s missing from sources %s' %
+                                (q['source'], self.sources.keys()))
+
         self.sender_func = sender_func
 
     def build_api_url(self, source, query):
@@ -66,6 +112,7 @@ class Query(object):
         url, params = self.build_api_url(source, query)
         headers = {'Content-Type': 'application/json'}
         r = requests.get(url, params=params, headers=headers)
+        r.raise_for_status()
 
         channel = '#' + query['channel']
 
@@ -106,13 +153,8 @@ def main():
         print(result.url)
         print(result.message)
 
-    query = Query(
-        channel_config.get('sources', {}),
-        channel_config.get('queries', {}),
-        sender_print
-    )
+    query = Query(channel_config, sender_print)
     query.query_all()
-
 
 
 if __name__ == "__main__":
