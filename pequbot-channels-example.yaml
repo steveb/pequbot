@@ -1,30 +1,29 @@
 
 sources:
   storyboard.openstack.org:
-    api_docs: https://docs.openstack.org/infra/storyboard/webapi/v1.html#stories
+    # api docs https://docs.openstack.org/infra/storyboard/webapi/v1.html#stories
     url: https://storyboard.openstack.org/api/v1/stories
     params:
       query:
         limit: 5
+        sort_field: updated_at
+        sort_dir: desc
         project_id:
         status:
         tags:
-    item_url: https://storyboard.openstack.org/#!/story/{{id}}
-    item_name: "{{title}}"
 
   review.opendev.org:
-    api_docs: https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#list-changes
+    # api docs https://gerrit-review.googlesource.com/Documentation/rest-api-changes.html#list-changes
+    # query format https://gerrit-review.googlesource.com/Documentation/user-search.html
     url: https://review.opendev.org/changes/
     params:
       query:
         n: 5
         q:
     response_prefix: ")]}'"
-    item_url: https://review.opendev.org/{{_number}}
-    item_name: "{{subject}}"
 
   launchpad.net:
-    api_docs: https://launchpad.net/+apidoc/1.0.html#project
+    # api docs https://launchpad.net/+apidoc/1.0.html#project
     url: https://api.launchpad.net/1.0/{{project}}
     params:
       url:
@@ -36,11 +35,9 @@ sources:
         importance:
         search_text:
         status:
-    item_url: "{{web_link}}"
-    item_name: "{{title}}"
 
   bugzilla.redhat.com:
-    api_docs: https://bugzilla.readthedocs.io/en/latest/api/core/v1/bug.html#search-bugs
+    # api docs https://bugzilla.readthedocs.io/en/latest/api/core/v1/bug.html#search-bugs
     url: https://bugzilla.redhat.com/rest/bug
     params:
       query:
@@ -51,8 +48,6 @@ sources:
         priority:
         severity:
         status:
-    item_url: https://bugzilla.redhat.com/show_bug.cgi?id={{id}}
-    item_name: "{{summary}}"
 
 queries:
   tripleo_ci_critical:
@@ -99,5 +94,15 @@ queries:
       https://review.opendev.org/{{item._number}} {{item.project.split('/')[1]}}: {{item.subject}}
       {%- endfor %}
 
-
-
+  rdo_package_review:
+    channel: rdo
+    source: bugzilla.redhat.com
+    params:
+      product: RDO
+      component: Package Review
+      status: NEW
+    template: |
+      Recent NEW package reviews:
+      {%- for item in result.bugs %}
+      https://bugzilla.redhat.com/show_bug.cgi?id={{item.id}} {{item.summary}}
+      {%- endfor %}
