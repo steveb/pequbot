@@ -51,6 +51,7 @@ sources:
 
 queries:
   tripleo_ci_critical:
+    period_seconds: 3600
     channel: tripleo
     source: launchpad.net
     params:
@@ -64,6 +65,7 @@ queries:
       {%- endfor -%}
 
   ironic_ci:
+    period_seconds: 3600
     channel: openstack-ironic
     source: storyboard.openstack.org
     params:
@@ -76,6 +78,7 @@ queries:
       {%- endfor %}
 
   ironic_unreviewed:
+    period_seconds: 3600
     channel: openstack-ironic
     source: review.opendev.org
     params:
@@ -95,6 +98,7 @@ queries:
       {%- endfor %}
 
   rdo_package_review:
+    period_seconds: 3600
     channel: rdo
     source: bugzilla.redhat.com
     params:

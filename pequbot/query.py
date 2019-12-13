@@ -35,7 +35,7 @@ SCHEMA = {
 
 SOURCE_SCHEMA = {
     'type': 'object',
-    'required': ['url', 'params'],
+    'required': ['url'],
     'properties': {
         'url': {'type': 'string'},
         'params': {
@@ -51,8 +51,9 @@ SOURCE_SCHEMA = {
 
 QUERY_SCHEMA = {
     'type': 'object',
-    'required': ['channel', 'source', 'params', 'template'],
+    'required': ['period_seconds', 'channel', 'source', 'params', 'template'],
     'properties': {
+        'period_seconds': {'type': 'integer'},
         'channel': {'type': 'string'},
         'source': {'type': 'string'},
         'params': {'type': 'object'},
@@ -61,7 +62,7 @@ QUERY_SCHEMA = {
 }
 
 
-class QueryResult(object):
+class Result(object):
 
     def __init__(self, channel, message, url):
         self.channel = channel
@@ -69,22 +70,22 @@ class QueryResult(object):
         self.url = url
 
 
-class Query(object):
+class Caller(object):
 
-    def __init__(self, channel_config, sender_func):
+    def __init__(self, channel_config):
         jsonschema.validate(channel_config, SCHEMA)
         self.sources = channel_config.get('sources', {})
         for s in self.sources.values():
             jsonschema.validate(s, SOURCE_SCHEMA)
 
         self.queries = channel_config.get('queries', {})
+        self.channels = set()
         for q in self.queries.values():
             jsonschema.validate(q, QUERY_SCHEMA)
             if q['source'] not in self.sources:
                 raise Exception('source %s missing from sources %s' %
                                 (q['source'], self.sources.keys()))
-
-        self.sender_func = sender_func
+            self.channels.add('#' + q['channel'])
 
     def build_api_url(self, source, query):
         url = source['url']
@@ -106,7 +107,7 @@ class Query(object):
 
         return url, qs_params
 
-    def query(self, query):
+    def call(self, query):
         source = self.sources[query['source']]
 
         url, params = self.build_api_url(source, query)
@@ -128,12 +129,11 @@ class Query(object):
             result = r.json()
         message = template.render(result=result)
 
-        self.sender_func(QueryResult(channel, message, r.url))
+        return Result(channel, message, r.url)
 
-    def query_all(self):
-        for name in self.queries:
-            query = self.queries[name]
-            self.query(query)
+    def call_all(self):
+        for query in self.queries.values():
+            yield self.call(query)
 
 
 def main():
@@ -147,14 +147,12 @@ def main():
 
     channel_config = yaml.safe_load(open(fp))
 
-    def sender_print(result):
+    caller = Caller(channel_config)
+    for result in caller.call_all():
         print('===')
         print(result.channel)
         print(result.url)
         print(result.message)
-
-    query = Query(channel_config, sender_print)
-    query.query_all()
 
 
 if __name__ == "__main__":
