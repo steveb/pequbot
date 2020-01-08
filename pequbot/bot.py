@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+# Copyright 2019 Red Hat, Inc.
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -79,6 +81,8 @@ class Pequbot(SASL, SSL, irc.bot.SingleServerIRCBot):
         self.log.info('Running query %s' % query_name)
         query = self.caller.queries[query_name]
         result = self.caller.call(query)
+        if not result:
+            return
         for message in result.message.split("\n"):
             self.send(result.channel, message)
 

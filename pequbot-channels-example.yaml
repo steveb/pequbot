@@ -59,10 +59,12 @@ queries:
       tags: alert
       importance: Critical
     template: |
+      {%- if result.total_size > 0 -%}
       URGENT TRIPLEO TASKS NEEDING ATTENTION: {{result.total_size}}
       {%- for item in result.entries %}
       {{item.web_link}}
       {%- endfor -%}
+      {%- endif -%}
 
   ironic_ci:
     period_seconds: 3600
@@ -72,10 +74,12 @@ queries:
       status: active
       tags: ci
     template: |
+      {%- if result|length > 0 -%}
       {{result|length}} issues causing CI failures:
       {%- for item in result %}
       https://storyboard.openstack.org/#!/story/{{item.id}} {{item.title}}
       {%- endfor %}
+      {%- endif -%}
 
   ironic_unreviewed:
     period_seconds: 3600
@@ -92,10 +96,12 @@ queries:
         -message:WIP
         -message:DNM
     template: |
+      {%- if result|length > 0 -%}
       {{result|length}} changes in the last month needing reviews:
       {%- for item in result %}
       https://review.opendev.org/{{item._number}} {{item.project.split('/')[1]}}: {{item.subject}}
       {%- endfor %}
+      {%- endif -%}
 
   rdo_package_review:
     period_seconds: 3600
@@ -106,7 +112,9 @@ queries:
       component: Package Review
       status: NEW
     template: |
+      {%- if result.bugs|length > 0 -%}
       Recent NEW package reviews:
       {%- for item in result.bugs %}
       https://bugzilla.redhat.com/show_bug.cgi?id={{item.id}} {{item.summary}}
       {%- endfor %}
+      {%- endif -%}

@@ -1,4 +1,6 @@
 #! /usr/bin/env python
+# Copyright 2019 Red Hat, Inc.
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -87,7 +89,8 @@ class Caller(object):
                                 (q['source'], self.sources.keys()))
             self.channels.add('#' + q['channel'])
 
-    def build_api_url(self, source, query):
+    @classmethod
+    def build_api_url(cls, source, query):
         url = source['url']
         source_params = source.get('params', {})
         qs_params = dict(source_params.get('query', {}))
@@ -128,6 +131,9 @@ class Caller(object):
         else:
             result = r.json()
         message = template.render(result=result)
+        if not message.strip():
+            # the message is empty, so don't send it
+            return None
 
         return Result(channel, message, r.url)
 
